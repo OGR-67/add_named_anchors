@@ -2,8 +2,6 @@ import os
 import re
 import argparse
 
-from matplotlib.pyplot import get
-
 
 def get_arg_file():
     parser = argparse.ArgumentParser(
@@ -11,6 +9,12 @@ def get_arg_file():
     parser.add_argument("-f", help="Specify the file to edit.")
     args = parser.parse_args()
     return args.f
+
+
+def get_files_in_current_directory():
+    for _, __, files in os.walk("."):
+        break
+    return files
 
 
 def file_inexistent():
@@ -21,16 +25,21 @@ def file_bad_extension():
     print("I'm sorry, but this script is only for *.md files")
 
 
-def add_named_anchor(file_path):
-    with open(file_path) as f:
+def find_all_links(path):
+    with open(path) as f:
         file_text = f.read()
-        targets = re.findall(r"\(#.*\)", file_text)
+        return re.findall(r"\(#.*\)", file_text)
 
-        with open(file_path) as f:
-            file_lines = f.readlines()
+def format_target(target):
+    return f"# {target[2:-1].replace('-', ' ')}\n"
+
+def add_named_anchor(file_path):
+    targets = find_all_links(file_path)
+    with open(file_path) as f:
+        file_lines = f.readlines()
 
         for target in targets:
-            formated_target = f"# {target[2:-1].replace('-', ' ')}\n"
+            formated_target = format_target(target)
 
             for line_index in range(len(file_lines)):
                 line_lower = file_lines[line_index].lower()
@@ -38,18 +47,18 @@ def add_named_anchor(file_path):
                     file_lines[line_index] = file_lines[line_index][:-1] + \
                         f"<a name={target[2:-1]}></a>"
 
-        with open(file_path, "w") as f:
-            f.writelines(file_lines)
-            print(f'{len(targets)} links has been updated with named anchors.')
+    with open(file_path, "w") as f:
+        f.writelines(file_lines)
+        print(f'{len(targets)} links has been updated with named anchors.')
 
 
 if __name__ == "__main__":
     file_path = get_arg_file()
-
-    for _, __, files in os.walk("."):
-        if file_path not in files:
-            file_inexistent()
-        elif file_path.endswith(".md"):
-            add_named_anchor(file_path)
-        else:
-            file_bad_extension()
+    files = get_files_in_current_directory()
+    
+    if file_path not in files:
+        file_inexistent()
+    elif file_path.endswith(".md"):
+        add_named_anchor(file_path)
+    else:
+        file_bad_extension()
